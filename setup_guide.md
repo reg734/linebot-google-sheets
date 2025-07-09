@@ -2,8 +2,7 @@
 
 ## 1. 環境變數設定
 
-1. 複製 `.env.example` 檔案並重新命名為 `.env`
-2. 在 `.env` 檔案中填入您的 LINE Bot 資訊：
+建立 `.env` 檔案並填入您的 LINE Bot 資訊：
 
 ```
 LINE_CHANNEL_ACCESS_TOKEN=你的_Channel_Access_Token
@@ -51,9 +50,16 @@ python app.py
 - `zbpack.json` - Zeabur 建置配置
 - `runtime.txt` - Python 版本指定
 - `requirements.txt` - Python 依賴套件
-- `credentials.json` - Google API 憑證
 
-### 5.2 部署步驟
+### 5.2 準備 Google API 憑證（Base64 編碼）
+1. 開啟本機的 `credentials.json` 檔案
+2. 將整個檔案內容轉換為 Base64 編碼：
+   ```bash
+   base64 -i credentials.json
+   ```
+3. 複製輸出的 Base64 字串
+
+### 5.3 部署步驟
 1. 在 [Zeabur 儀表板](https://dash.zeabur.com) 建立新專案
 2. 連接您的 Git 倉庫（GitHub/GitLab）
 3. 選擇要部署的分支
@@ -62,10 +68,10 @@ python app.py
    - `LINE_CHANNEL_SECRET`
    - `LINE_CHANNEL_ID`
    - `GOOGLE_SPREADSHEET_ID`
-5. 確保 `credentials.json` 已上傳到專案根目錄
-6. 部署完成後，複製 Zeabur 提供的 URL
+   - `GOOGLE_CREDENTIALS_BASE64` （步驟 5.2 產生的 Base64 字串）
+5. 部署完成後，複製 Zeabur 提供的 URL
 
-### 5.3 設定 LINE Bot Webhook
+### 5.4 設定 LINE Bot Webhook
 1. 複製 Zeabur 提供的部署 URL
 2. 在 LINE Developers Console 中設定 Webhook URL：
    ```
@@ -80,7 +86,7 @@ python app.py
 ## 故障排除
 
 - 確保所有環境變數都已正確設定
-- 檢查 Google Sheets API 憑證是否正確
+- 檢查 Google Sheets API 憑證的 Base64 編碼是否正確
 - 確認 Zeabur 部署狀態正常且 Webhook URL 正確
 - 查看 Zeabur 部署日誌以獲取錯誤訊息
-- 確保 `credentials.json` 已正確上傳到專案根目錄
+- 確保 `GOOGLE_CREDENTIALS_BASE64` 環境變數包含完整的 Base64 字串

@@ -50,7 +50,7 @@ GOOGLE_SPREADSHEET_ID=你的_Google_Spreadsheet_ID
 ### 3. 設定 Google Sheets API
 
 1. 從 Google Cloud Console 下載服務帳戶 JSON 憑證
-2. 重新命名為 `credentials.json` 並放在專案根目錄
+2. 重新命名為 `credentials.json` 並放在專案根目錄（本地開發用）
 
 ### 4. 測試 Google Sheets 連線
 
@@ -67,7 +67,7 @@ python test_sheets.py
    - `LINE_CHANNEL_SECRET`
    - `LINE_CHANNEL_ID`
    - `GOOGLE_SPREADSHEET_ID`
-   - `GOOGLE_CREDENTIALS` （Google API 憑證的完整 JSON 內容）
+   - `GOOGLE_CREDENTIALS_BASE64` （Google API 憑證的 Base64 編碼）
 5. 部署完成後，複製 Zeabur 提供的 URL
 
 ### 6. 設定 LINE Bot Webhook

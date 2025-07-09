@@ -35,24 +35,26 @@ LINE_CHANNEL_ACCESS_TOKEN=您的_Channel_Access_Token
 LINE_CHANNEL_SECRET=您的_Channel_Secret
 LINE_CHANNEL_ID=您的_Channel_ID
 GOOGLE_SPREADSHEET_ID=您的_Google_Spreadsheet_ID
-GOOGLE_CREDENTIALS={"type":"service_account",...完整JSON內容}
+GOOGLE_CREDENTIALS_BASE64=您的_Base64_編碼憑證
 ```
 
 ### 3. 設定 Google API 憑證
 
-有兩種方式設定 Google API 憑證：
+使用 Base64 編碼方式設定 Google API 憑證：
 
-#### 方式一：使用環境變數（推薦）
 1. 開啟本機的 `credentials.json` 檔案
-2. 複製整個 JSON 內容（從 `{` 到 `}`）
-3. 在 Zeabur 環境變數中新增：
-   - 變數名稱：`GOOGLE_CREDENTIALS`
-   - 變數值：貼上完整的 JSON 內容
-
-#### 方式二：上傳檔案（如果 Zeabur 支援）
-1. 在 Zeabur 專案中，找到檔案管理功能
-2. 手動上傳 `credentials.json` 到專案根目錄
-3. 確保檔案路徑正確為 `/credentials.json`
+2. 將檔案內容轉換為 Base64 編碼：
+   ```bash
+   # macOS/Linux
+   base64 -i credentials.json
+   
+   # Windows (使用 PowerShell)
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes("credentials.json"))
+   ```
+3. 複製輸出的 Base64 字串
+4. 在 Zeabur 環境變數中新增：
+   - 變數名稱：`GOOGLE_CREDENTIALS_BASE64`
+   - 變數值：貼上 Base64 字串
 
 ### 4. 部署設定
 
@@ -114,7 +116,8 @@ https://your-app-name.zeabur.app/callback
    - 檢查變數名稱是否正確
 
 3. **Google API 認證失敗**
-   - 確認 `credentials.json` 已正確上傳
+   - 確認 `GOOGLE_CREDENTIALS_BASE64` 環境變數設定正確
+   - 檢查 Base64 編碼是否完整且正確
    - 檢查服務帳戶權限是否正確
    - 確認 Google Sheets 已分享給服務帳戶
 
