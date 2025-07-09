@@ -21,12 +21,26 @@ class GoogleSheetsHandler:
             # 優先從環境變數讀取憑證
             google_credentials = os.getenv('GOOGLE_CREDENTIALS')
             if google_credentials:
-                # 從環境變數讀取 JSON 憑證
-                credentials_info = json.loads(google_credentials)
-                creds = Credentials.from_service_account_info(
-                    credentials_info, scopes=self.SCOPES)
-                logger.info("使用環境變數中的 Google API 憑證")
-                return build('sheets', 'v4', credentials=creds)
+                try:
+                    # 處理可能的 JSON 轉義問題
+                    if google_credentials.startswith('"') and google_credentials.endswith('"'):
+                        # 如果被額外引號包圍，移除它們
+                        google_credentials = google_credentials[1:-1]
+                    
+                    # 處理轉義的引號和換行符
+                    google_credentials = google_credentials.replace('\\"', '"').replace('\\n', '\n')
+                    
+                    # 從環境變數讀取 JSON 憑證
+                    credentials_info = json.loads(google_credentials)
+                    creds = Credentials.from_service_account_info(
+                        credentials_info, scopes=self.SCOPES)
+                    logger.info("使用環境變數中的 Google API 憑證")
+                    return build('sheets', 'v4', credentials=creds)
+                except json.JSONDecodeError as e:
+                    logger.error(f"Google API 憑證 JSON 格式錯誤: {e}")
+                    logger.error(f"憑證內容長度: {len(google_credentials)}")
+                    logger.error(f"憑證開頭: {google_credentials[:100]}...")
+                    raise
             
             # 如果環境變數不存在，嘗試從檔案讀取（本地開發用）
             elif os.path.exists('credentials.json'):
