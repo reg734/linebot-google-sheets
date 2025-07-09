@@ -35,12 +35,21 @@ LINE_CHANNEL_ACCESS_TOKEN=您的_Channel_Access_Token
 LINE_CHANNEL_SECRET=您的_Channel_Secret
 LINE_CHANNEL_ID=您的_Channel_ID
 GOOGLE_SPREADSHEET_ID=您的_Google_Spreadsheet_ID
+GOOGLE_CREDENTIALS={"type":"service_account",...完整JSON內容}
 ```
 
-### 3. 上傳 Google API 憑證
+### 3. 設定 Google API 憑證
 
-由於 `credentials.json` 包含敏感資訊，不應提交到 Git 倉庫：
+有兩種方式設定 Google API 憑證：
 
+#### 方式一：使用環境變數（推薦）
+1. 開啟本機的 `credentials.json` 檔案
+2. 複製整個 JSON 內容（從 `{` 到 `}`）
+3. 在 Zeabur 環境變數中新增：
+   - 變數名稱：`GOOGLE_CREDENTIALS`
+   - 變數值：貼上完整的 JSON 內容
+
+#### 方式二：上傳檔案（如果 Zeabur 支援）
 1. 在 Zeabur 專案中，找到檔案管理功能
 2. 手動上傳 `credentials.json` 到專案根目錄
 3. 確保檔案路徑正確為 `/credentials.json`

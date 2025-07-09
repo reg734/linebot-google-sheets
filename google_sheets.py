@@ -18,9 +18,31 @@ class GoogleSheetsHandler:
     def _authenticate(self):
         """Google Sheets API 認證 - 使用服務帳戶"""
         try:
-            creds = Credentials.from_service_account_file(
-                'credentials.json', scopes=self.SCOPES)
-            return build('sheets', 'v4', credentials=creds)
+            # 優先從環境變數讀取憑證
+            google_credentials = os.getenv('GOOGLE_CREDENTIALS')
+            if google_credentials:
+                # 從環境變數讀取 JSON 憑證
+                credentials_info = json.loads(google_credentials)
+                creds = Credentials.from_service_account_info(
+                    credentials_info, scopes=self.SCOPES)
+                logger.info("使用環境變數中的 Google API 憑證")
+                return build('sheets', 'v4', credentials=creds)
+            
+            # 如果環境變數不存在，嘗試從檔案讀取（本地開發用）
+            elif os.path.exists('credentials.json'):
+                creds = Credentials.from_service_account_file(
+                    'credentials.json', scopes=self.SCOPES)
+                logger.info("使用本地 credentials.json 檔案")
+                return build('sheets', 'v4', credentials=creds)
+            
+            else:
+                raise FileNotFoundError(
+                    "找不到 Google API 憑證。請設定 GOOGLE_CREDENTIALS 環境變數或提供 credentials.json 檔案"
+                )
+                
+        except json.JSONDecodeError as e:
+            logger.error(f"Google API 憑證 JSON 格式錯誤: {e}")
+            raise
         except Exception as e:
             logger.error(f"Google Sheets 認證失敗: {e}")
             raise

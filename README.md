@@ -67,7 +67,7 @@ python test_sheets.py
    - `LINE_CHANNEL_SECRET`
    - `LINE_CHANNEL_ID`
    - `GOOGLE_SPREADSHEET_ID`
-4. 上傳 `credentials.json` 檔案到專案根目錄
+   - `GOOGLE_CREDENTIALS` （Google API 憑證的完整 JSON 內容）
 5. 部署完成後，複製 Zeabur 提供的 URL
 
 ### 6. 設定 LINE Bot Webhook
