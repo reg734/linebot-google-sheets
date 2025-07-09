@@ -20,6 +20,21 @@ class GoogleSheetsHandler:
         try:
             # 優先從環境變數讀取憑證
             google_credentials = os.getenv('GOOGLE_CREDENTIALS')
+            google_credentials_base64 = os.getenv('GOOGLE_CREDENTIALS_BASE64')
+            
+            if google_credentials_base64:
+                try:
+                    # 從 Base64 編碼的環境變數讀取憑證
+                    decoded_credentials = base64.b64decode(google_credentials_base64).decode('utf-8')
+                    credentials_info = json.loads(decoded_credentials)
+                    creds = Credentials.from_service_account_info(
+                        credentials_info, scopes=self.SCOPES)
+                    logger.info("使用 Base64 編碼的 Google API 憑證")
+                    return build('sheets', 'v4', credentials=creds)
+                except Exception as e:
+                    logger.error(f"Base64 憑證解碼失敗: {e}")
+                    # 繼續嘗試其他方法
+            
             if google_credentials:
                 try:
                     # 處理可能的 JSON 轉義問題
@@ -40,19 +55,19 @@ class GoogleSheetsHandler:
                     logger.error(f"Google API 憑證 JSON 格式錯誤: {e}")
                     logger.error(f"憑證內容長度: {len(google_credentials)}")
                     logger.error(f"憑證開頭: {google_credentials[:100]}...")
-                    raise
+                    # 繼續嘗試其他方法
             
             # 如果環境變數不存在，嘗試從檔案讀取（本地開發用）
-            elif os.path.exists('credentials.json'):
+            if os.path.exists('credentials.json'):
                 creds = Credentials.from_service_account_file(
                     'credentials.json', scopes=self.SCOPES)
                 logger.info("使用本地 credentials.json 檔案")
                 return build('sheets', 'v4', credentials=creds)
             
-            else:
-                raise FileNotFoundError(
-                    "找不到 Google API 憑證。請設定 GOOGLE_CREDENTIALS 環境變數或提供 credentials.json 檔案"
-                )
+            # 如果所有方法都失敗
+            raise FileNotFoundError(
+                "找不到 Google API 憑證。請設定 GOOGLE_CREDENTIALS_BASE64 或 GOOGLE_CREDENTIALS 環境變數，或提供 credentials.json 檔案"
+            )
                 
         except json.JSONDecodeError as e:
             logger.error(f"Google API 憑證 JSON 格式錯誤: {e}")
