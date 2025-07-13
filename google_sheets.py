@@ -275,12 +275,80 @@ class GoogleSheetsHandler:
             
         except HttpError as error:
             if 'storageQuotaExceeded' in str(error):
-                logger.error("服務帳戶沒有儲存配額，無法上傳到 Drive")
+                logger.error("服務帳戶沒有儲存配額，嘗試使用免費圖床")
+                return self._upload_to_imgbb(image_data, filename)
             else:
                 logger.error(f"Google Drive API error: {error}")
             return None
         except Exception as error:
             logger.error(f"Error uploading image to Drive: {error}")
+            return None
+
+    def _upload_to_imgbb(self, image_data, filename):
+        """使用 ImgBB 免費圖床作為備用方案"""
+        try:
+            import requests
+            
+            # ImgBB API (免費，每月 5000 次上傳)
+            api_key = os.getenv('IMGBB_API_KEY')  # 可選設定
+            
+            if not api_key:
+                logger.info("未設定 IMGBB_API_KEY，使用匿名上傳")
+                # 使用匿名上傳 (限制較多但免費)
+                url = "https://api.imgbb.com/1/upload"
+                
+                # 轉換為 base64
+                image_base64 = base64.b64encode(image_data).decode('utf-8')
+                
+                # 匿名上傳到免費圖床
+                payload = {
+                    'image': image_base64,
+                    'name': filename
+                }
+                
+                # 先嘗試不需要 API key 的服務
+                return self._try_alternative_image_host(image_data, filename)
+            else:
+                # 有 API key 的情況
+                url = f"https://api.imgbb.com/1/upload?key={api_key}"
+                image_base64 = base64.b64encode(image_data).decode('utf-8')
+                
+                payload = {
+                    'image': image_base64,
+                    'name': filename
+                }
+                
+                response = requests.post(url, data=payload, timeout=30)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get('success'):
+                        image_url = result['data']['url']
+                        logger.info(f"圖片成功上傳到 ImgBB: {image_url}")
+                        return image_url
+                
+                logger.error(f"ImgBB 上傳失敗: {response.text}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"免費圖床上傳失敗: {e}")
+            return None
+
+    def _try_alternative_image_host(self, image_data, filename):
+        """嘗試其他免費圖片託管方案"""
+        try:
+            # 方案：將圖片儲存為 data URL (適合小圖片)
+            if len(image_data) < 100000:  # 小於 100KB
+                image_base64 = base64.b64encode(image_data).decode('utf-8')
+                data_url = f"data:image/jpeg;base64,{image_base64}"
+                logger.info(f"使用 Data URL 方案 (圖片大小: {len(image_data)} bytes)")
+                return data_url
+            else:
+                logger.warning("圖片過大，無法使用 Data URL，改用描述方式")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Data URL 方案失敗: {e}")
             return None
     
     def create_headers(self):
