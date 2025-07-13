@@ -23,6 +23,9 @@ handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 # Google Sheets 處理器
 sheets_handler = GoogleSheetsHandler()
 
+# 用戶狀態管理 - 追蹤誰在儲存模式中
+user_save_states = {}
+
 @app.route("/callback", methods=['POST'])
 def callback():
     # get X-Line-Signature header value
@@ -48,13 +51,43 @@ def handle_text_message(event):
     text = event.message.text
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
-    # 儲存到Google Sheets
+    # 檢查是否為控制指令
+    if text == '/save':
+        user_save_states[user_id] = True
+        reply_text = "開始儲存模式，接下來的訊息和圖片將會儲存到Google Sheets"
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=reply_text)
+        )
+        logger.info(f"User {user_id} started save mode")
+        return
+    
+    elif text == '/end':
+        user_save_states[user_id] = False
+        reply_text = "停止儲存模式，接下來的訊息和圖片將不會儲存"
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=reply_text)
+        )
+        logger.info(f"User {user_id} ended save mode")
+        return
+    
+    # 檢查用戶是否在儲存模式中
+    if not user_save_states.get(user_id, False):
+        reply_text = "目前非儲存模式，請先輸入 /save 開始儲存"
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=reply_text)
+        )
+        return
+    
+    # 儲存到Google Sheets (只在儲存模式中)
     try:
         sheets_handler.save_message(user_id, text, 'text', timestamp)
         logger.info(f"Text message saved: {text}")
         
         # 回覆訊息
-        reply_text = f"已收到您的訊息並儲存至Google Sheets: {text}"
+        reply_text = f"已儲存訊息: {text}"
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=reply_text)
@@ -73,18 +106,31 @@ def handle_image_message(event):
     message_id = event.message.id
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
+    # 檢查用戶是否在儲存模式中
+    if not user_save_states.get(user_id, False):
+        reply_text = "目前非儲存模式，請先輸入 /save 開始儲存"
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=reply_text)
+        )
+        return
+    
     try:
         # 取得圖片內容
         message_content = line_bot_api.get_message_content(message_id)
         image_data = message_content.content
         
-        # 儲存圖片到Google Sheets
+        # 儲存圖片到Google Drive和Google Sheets
         image_url = sheets_handler.save_image(user_id, image_data, message_id, timestamp)
         
         logger.info(f"Image message saved: {message_id}")
         
         # 回覆訊息
-        reply_text = f"已收到您的圖片並儲存至Google Sheets"
+        if image_url:
+            reply_text = f"已儲存圖片至Google Drive: {image_url}"
+        else:
+            reply_text = "圖片已儲存但上傳Google Drive時發生問題"
+        
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=reply_text)
