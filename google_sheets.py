@@ -137,8 +137,94 @@ class GoogleSheetsHandler:
             logger.error(f"Drive 資料夾驗證錯誤: {error}")
             return None
 
-    def upload_image_to_drive(self, image_data, filename):
-        """上傳圖片到 Google Drive 並返回可分享的連結"""
+    def _save_image_as_base64(self, image_data, filename):
+        """備用方案：將圖片轉換為 Base64 並儲存到 Google Sheets"""
+        try:
+            logger.info(f"使用 Base64 備用方案儲存圖片: {filename}")
+            
+            # 將圖片轉換為 base64
+            image_base64 = base64.b64encode(image_data).decode('utf-8')
+            
+            # 建立一個簡單的 HTML 頁面來顯示圖片
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head><title>{filename}</title></head>
+            <body>
+                <h2>LINE Bot 圖片</h2>
+                <p>檔案名稱: {filename}</p>
+                <img src="data:image/jpeg;base64,{image_base64}" style="max-width:100%;height:auto;" />
+            </body>
+            </html>
+            """
+            
+            # 這裡可以考慮使用其他免費圖床服務
+            # 暫時返回一個說明連結
+            info_url = f"data:text/html;base64,{base64.b64encode(html_content.encode()).decode()}"
+            
+            logger.info("已使用 Base64 方案處理圖片")
+            return f"[Base64圖片] 大小: {len(image_data)} bytes"
+            
+        except Exception as e:
+            logger.error(f"Base64 備用方案失敗: {e}")
+            return None
+
+    def save_image(self, user_id, image_data, message_id, timestamp):
+        """儲存圖片到Google Drive並將連結存到Google Sheets"""
+        try:
+            # 生成檔案名稱
+            filename = f"linebot_image_{message_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+            
+            # 先嘗試上傳到 Google Drive
+            drive_result = self._try_drive_upload(image_data, filename)
+            
+            if drive_result and drive_result.startswith('https://'):
+                # Drive 上傳成功
+                image_info = f"圖片大小: {len(image_data)} bytes"
+                image_url = drive_result
+                
+                values = [
+                    [timestamp, user_id, 'image', image_info, image_url]
+                ]
+                
+                logger.info(f"圖片成功上傳到 Google Drive: {image_url}")
+                
+            else:
+                # Drive 上傳失敗，使用 Base64 備用方案
+                logger.info("Drive 上傳失敗，使用 Base64 備用方案")
+                base64_info = self._save_image_as_base64(image_data, filename)
+                
+                image_info = f"Base64 圖片 - 大小: {len(image_data)} bytes"
+                image_url = "Base64 儲存 (無法上傳到 Drive)"
+                
+                values = [
+                    [timestamp, user_id, 'image', image_info, image_url]
+                ]
+            
+            # 儲存到 Google Sheets
+            body = {
+                'values': values
+            }
+            
+            result = self.service.spreadsheets().values().append(
+                spreadsheetId=self.SPREADSHEET_ID,
+                range=self.RANGE_NAME,
+                valueInputOption='RAW',
+                body=body
+            ).execute()
+            
+            logger.info(f"Image saved to Google Sheets: {result.get('updates', {}).get('updatedCells', 0)} cells updated")
+            return image_url
+            
+        except HttpError as error:
+            logger.error(f"Google Sheets API error: {error}")
+            return None
+        except Exception as error:
+            logger.error(f"Error saving image: {error}")
+            return None
+
+    def _try_drive_upload(self, image_data, filename):
+        """嘗試上傳到 Google Drive，成功返回 URL，失敗返回 None"""
         try:
             # 驗證並取得有效的資料夾 ID
             valid_folder_id = self._verify_drive_folder()
@@ -189,104 +275,12 @@ class GoogleSheetsHandler:
             
         except HttpError as error:
             if 'storageQuotaExceeded' in str(error):
-                logger.error("服務帳戶沒有儲存配額。請使用共享雲端硬碟或改用 Base64 儲存方案")
-                # 改用 Base64 儲存方案
-                return self._save_image_as_base64(image_data, filename)
+                logger.error("服務帳戶沒有儲存配額，無法上傳到 Drive")
             else:
                 logger.error(f"Google Drive API error: {error}")
-                return None
+            return None
         except Exception as error:
             logger.error(f"Error uploading image to Drive: {error}")
-            return None
-
-    def _save_image_as_base64(self, image_data, filename):
-        """備用方案：將圖片轉換為 Base64 並儲存到 Google Sheets"""
-        try:
-            logger.info(f"使用 Base64 備用方案儲存圖片: {filename}")
-            
-            # 將圖片轉換為 base64
-            image_base64 = base64.b64encode(image_data).decode('utf-8')
-            
-            # 建立一個簡單的 HTML 頁面來顯示圖片
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head><title>{filename}</title></head>
-            <body>
-                <h2>LINE Bot 圖片</h2>
-                <p>檔案名稱: {filename}</p>
-                <img src="data:image/jpeg;base64,{image_base64}" style="max-width:100%;height:auto;" />
-            </body>
-            </html>
-            """
-            
-            # 這裡可以考慮使用其他免費圖床服務
-            # 暫時返回一個說明連結
-            info_url = f"data:text/html;base64,{base64.b64encode(html_content.encode()).decode()}"
-            
-            logger.info("已使用 Base64 方案處理圖片")
-            return f"[Base64圖片] 大小: {len(image_data)} bytes"
-            
-        except Exception as e:
-            logger.error(f"Base64 備用方案失敗: {e}")
-            return None
-
-    def save_image(self, user_id, image_data, message_id, timestamp):
-        """儲存圖片到Google Drive並將連結存到Google Sheets"""
-        try:
-            # 生成檔案名稱
-            filename = f"linebot_image_{message_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-            
-            # 上傳圖片到 Google Drive
-            image_url = self.upload_image_to_drive(image_data, filename)
-            
-            if image_url:
-                # 儲存圖片資訊和連結到Google Sheets
-                image_info = f"圖片大小: {len(image_data)} bytes"
-                
-                values = [
-                    [timestamp, user_id, 'image', image_info, image_url]
-                ]
-                
-                body = {
-                    'values': values
-                }
-                
-                result = self.service.spreadsheets().values().append(
-                    spreadsheetId=self.SPREADSHEET_ID,
-                    range=self.RANGE_NAME,
-                    valueInputOption='RAW',
-                    body=body
-                ).execute()
-                
-                logger.info(f"Image saved to Google Sheets with Drive link: {result.get('updates', {}).get('updatedCells', 0)} cells updated")
-                return image_url
-            else:
-                # 如果 Drive 上傳失敗，仍然儲存基本資訊
-                image_info = f"圖片上傳失敗 - ID: {message_id}, 大小: {len(image_data)} bytes"
-                
-                values = [
-                    [timestamp, user_id, 'image', image_info, "上傳失敗"]
-                ]
-                
-                body = {
-                    'values': values
-                }
-                
-                self.service.spreadsheets().values().append(
-                    spreadsheetId=self.SPREADSHEET_ID,
-                    range=self.RANGE_NAME,
-                    valueInputOption='RAW',
-                    body=body
-                ).execute()
-                
-                return None
-            
-        except HttpError as error:
-            logger.error(f"Google Sheets API error: {error}")
-            return None
-        except Exception as error:
-            logger.error(f"Error saving image: {error}")
             return None
     
     def create_headers(self):
