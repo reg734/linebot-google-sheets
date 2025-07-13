@@ -151,11 +151,28 @@ GOOGLE_DRIVE_FOLDER_ID=你的_Google_Drive_資料夾_ID
 ```
 
 #### 9.3 Google Drive 資料夾設定
-1. 建立 Google Drive 資料夾存放圖片
-2. 分享資料夾給服務帳戶 email（編輯權限）
-3. 複製資料夾 ID 到環境變數
+1. **建立 Google Drive 資料夾**存放圖片
+2. **重要**：分享資料夾給服務帳戶 email（給予**編輯器**權限）
+   - 在 `credentials.json` 中找到 `client_email` 
+   - 右鍵點擊資料夾 → 分享 → 輸入 `client_email` → 選擇「編輯器」
+3. **複製資料夾 ID**：
+   - 開啟資料夾，從 URL 複製 ID (如：`1Qdn5epmh6Zbl3iSsSu2fEH37hhT_yV-B`)
+   - 填入環境變數 `GOOGLE_DRIVE_FOLDER_ID`
 
-#### 9.4 服務帳戶權限檢查
-確認 `credentials.json` 中的 `client_email` 已加入：
-- Google Sheets 的分享清單（編輯權限）
-- Google Drive 資料夾的分享清單（編輯權限）
+#### 9.4 故障排除 - 資料夾權限問題
+如果出現 "File not found" 錯誤：
+
+1. **檢查服務帳戶權限**：
+   ```
+   確認 credentials.json 中的 client_email 已加入：
+   - Google Sheets 的分享清單（編輯器權限）
+   - Google Drive 資料夾的分享清單（編輯器權限）
+   ```
+
+2. **驗證資料夾 ID**：
+   - 確認從正確的 Drive URL 複製 ID
+   - 資料夾必須是您自己建立或有權限存取的
+
+3. **備用方案**：
+   - 如果資料夾權限有問題，程式會自動上傳到根目錄
+   - 仍然可以正常取得圖片連結

@@ -118,14 +118,38 @@ class GoogleSheetsHandler:
             logger.error(f"Error saving message: {error}")
             return False
     
+    def _verify_drive_folder(self):
+        """驗證 Google Drive 資料夾是否可存取"""
+        if not self.DRIVE_FOLDER_ID:
+            logger.info("未設定 GOOGLE_DRIVE_FOLDER_ID，將上傳到根目錄")
+            return None
+            
+        try:
+            # 嘗試取得資料夾資訊以驗證存取權限
+            folder = self.drive_service.files().get(fileId=self.DRIVE_FOLDER_ID).execute()
+            logger.info(f"Drive 資料夾驗證成功: {folder.get('name')}")
+            return self.DRIVE_FOLDER_ID
+        except HttpError as error:
+            logger.error(f"Drive 資料夾存取失敗 ({self.DRIVE_FOLDER_ID}): {error}")
+            logger.info("將改用根目錄上傳")
+            return None
+        except Exception as error:
+            logger.error(f"Drive 資料夾驗證錯誤: {error}")
+            return None
+
     def upload_image_to_drive(self, image_data, filename):
         """上傳圖片到 Google Drive 並返回可分享的連結"""
         try:
+            # 驗證並取得有效的資料夾 ID
+            valid_folder_id = self._verify_drive_folder()
+            
             # 建立檔案 metadata
             file_metadata = {
                 'name': filename,
-                'parents': [self.DRIVE_FOLDER_ID] if self.DRIVE_FOLDER_ID else []
+                'parents': [valid_folder_id] if valid_folder_id else []
             }
+            
+            logger.info(f"準備上傳圖片: {filename} 到 {'指定資料夾' if valid_folder_id else '根目錄'}")
             
             # 建立媒體上傳物件
             media = MediaIoBaseUpload(
@@ -138,10 +162,11 @@ class GoogleSheetsHandler:
             file = self.drive_service.files().create(
                 body=file_metadata,
                 media_body=media,
-                fields='id'
+                fields='id,name,parents'
             ).execute()
             
             file_id = file.get('id')
+            logger.info(f"檔案上傳成功，ID: {file_id}")
             
             # 設定檔案權限為公開可讀取
             permission = {
@@ -153,6 +178,8 @@ class GoogleSheetsHandler:
                 fileId=file_id,
                 body=permission
             ).execute()
+            
+            logger.info("檔案權限設定完成")
             
             # 建立可分享的連結
             download_url = f"https://drive.google.com/file/d/{file_id}/view"
