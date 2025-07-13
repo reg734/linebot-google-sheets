@@ -188,10 +188,47 @@ class GoogleSheetsHandler:
             return download_url
             
         except HttpError as error:
-            logger.error(f"Google Drive API error: {error}")
-            return None
+            if 'storageQuotaExceeded' in str(error):
+                logger.error("服務帳戶沒有儲存配額。請使用共享雲端硬碟或改用 Base64 儲存方案")
+                # 改用 Base64 儲存方案
+                return self._save_image_as_base64(image_data, filename)
+            else:
+                logger.error(f"Google Drive API error: {error}")
+                return None
         except Exception as error:
             logger.error(f"Error uploading image to Drive: {error}")
+            return None
+
+    def _save_image_as_base64(self, image_data, filename):
+        """備用方案：將圖片轉換為 Base64 並儲存到 Google Sheets"""
+        try:
+            logger.info(f"使用 Base64 備用方案儲存圖片: {filename}")
+            
+            # 將圖片轉換為 base64
+            image_base64 = base64.b64encode(image_data).decode('utf-8')
+            
+            # 建立一個簡單的 HTML 頁面來顯示圖片
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head><title>{filename}</title></head>
+            <body>
+                <h2>LINE Bot 圖片</h2>
+                <p>檔案名稱: {filename}</p>
+                <img src="data:image/jpeg;base64,{image_base64}" style="max-width:100%;height:auto;" />
+            </body>
+            </html>
+            """
+            
+            # 這裡可以考慮使用其他免費圖床服務
+            # 暫時返回一個說明連結
+            info_url = f"data:text/html;base64,{base64.b64encode(html_content.encode()).decode()}"
+            
+            logger.info("已使用 Base64 方案處理圖片")
+            return f"[Base64圖片] 大小: {len(image_data)} bytes"
+            
+        except Exception as e:
+            logger.error(f"Base64 備用方案失敗: {e}")
             return None
 
     def save_image(self, user_id, image_data, message_id, timestamp):

@@ -159,9 +159,9 @@ GOOGLE_DRIVE_FOLDER_ID=你的_Google_Drive_資料夾_ID
    - 開啟資料夾，從 URL 複製 ID (如：`1Qdn5epmh6Zbl3iSsSu2fEH37hhT_yV-B`)
    - 填入環境變數 `GOOGLE_DRIVE_FOLDER_ID`
 
-#### 9.4 故障排除 - 資料夾權限問題
-如果出現 "File not found" 錯誤：
+#### 9.4 故障排除 - Google Drive 問題
 
+##### 問題一：資料夾權限錯誤 ("File not found")
 1. **檢查服務帳戶權限**：
    ```
    確認 credentials.json 中的 client_email 已加入：
@@ -173,6 +173,31 @@ GOOGLE_DRIVE_FOLDER_ID=你的_Google_Drive_資料夾_ID
    - 確認從正確的 Drive URL 複製 ID
    - 資料夾必須是您自己建立或有權限存取的
 
-3. **備用方案**：
-   - 如果資料夾權限有問題，程式會自動上傳到根目錄
-   - 仍然可以正常取得圖片連結
+##### 問題二：服務帳戶儲存配額限制 ("storageQuotaExceeded")
+**症狀**：出現 "Service Accounts do not have storage quota" 錯誤
+
+**解決方案**：
+1. **建立共享雲端硬碟** (推薦)：
+   - 在 Google Drive 中建立「共享雲端硬碟」
+   - 將服務帳戶加入為成員
+   - 使用共享雲端硬碟的資料夾 ID
+
+2. **暫時解決方案**：
+   - 程式會自動使用 Base64 備用方案
+   - 圖片資訊仍會儲存到 Google Sheets
+   - 圖片以文字描述方式記錄
+
+##### 問題三：設定共享雲端硬碟
+1. **建立共享雲端硬碟**：
+   - 前往 Google Drive
+   - 左側選單 → 共享雲端硬碟 → 新增
+   - 輸入名稱 (如：LINE Bot Images)
+
+2. **添加服務帳戶**：
+   - 點擊共享雲端硬碟 → 管理成員
+   - 添加服務帳戶 email
+   - 權限設為「內容管理員」
+
+3. **取得資料夾 ID**：
+   - 在共享雲端硬碟中建立資料夾
+   - 複製資料夾 ID 到環境變數
