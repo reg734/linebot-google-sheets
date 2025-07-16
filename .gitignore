@@ -4,6 +4,8 @@
 # Google API 憑證
 credentials.json
 token.json
+oauth_credentials.json
+token.pickle
 
 # Python
 __pycache__/

@@ -5,7 +5,7 @@ from linebot.models import MessageEvent, TextMessage, ImageMessage, TextSendMess
 import os
 import logging
 from datetime import datetime
-from google_sheets import GoogleSheetsHandler
+from google_sheets_oauth import GoogleSheetsOAuthHandler as GoogleSheetsHandler
 from dotenv import load_dotenv
 
 load_dotenv()
