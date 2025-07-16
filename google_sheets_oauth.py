@@ -58,13 +58,26 @@ class GoogleSheetsOAuthHandler:
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 logger.info("更新過期的認證 token")
-                creds.refresh(Request())
+                try:
+                    creds.refresh(Request())
+                    logger.info("Token 更新成功")
+                except Exception as e:
+                    logger.error(f"Token 更新失敗: {e}")
+                    raise RuntimeError("OAuth2 token 已過期且無法更新，請重新設定認證")
             else:
+                # 在雲端部署環境中，如果沒有 credentials 檔案，則報錯
                 if not os.path.exists(self.CREDENTIALS_FILE):
-                    raise FileNotFoundError(
-                        f"找不到 OAuth 認證檔案: {self.CREDENTIALS_FILE}\n"
-                        "請先從 Google Cloud Console 下載 OAuth2 憑證檔案"
-                    )
+                    if token_base64:
+                        # 如果有環境變數但 token 無效，說明需要重新認證
+                        raise RuntimeError(
+                            "OAuth2 token 無效或已過期。\n"
+                            "請在本地重新執行 setup_oauth.py 並更新 GOOGLE_TOKEN_BASE64 環境變數"
+                        )
+                    else:
+                        raise FileNotFoundError(
+                            f"找不到 OAuth 認證檔案: {self.CREDENTIALS_FILE}\n"
+                            "請先從 Google Cloud Console 下載 OAuth2 憑證檔案"
+                        )
                 
                 logger.info("開始新的 OAuth2 認證流程")
                 flow = InstalledAppFlow.from_client_secrets_file(
@@ -74,10 +87,11 @@ class GoogleSheetsOAuthHandler:
                 creds = flow.run_local_server(port=0)
                 logger.info("OAuth2 認證成功")
             
-            # 儲存認證以供下次使用
-            with open(self.TOKEN_FILE, 'wb') as token:
-                pickle.dump(creds, token)
-                logger.info("認證 token 已儲存")
+            # 只有在本地環境才儲存 token 檔案
+            if not token_base64:
+                with open(self.TOKEN_FILE, 'wb') as token:
+                    pickle.dump(creds, token)
+                    logger.info("認證 token 已儲存")
         
         return creds
     
