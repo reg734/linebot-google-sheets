@@ -134,9 +134,16 @@ class GoogleSheetsOAuthHandler:
                 'name': filename
             }
             
-            # 如果有指定資料夾，加入 parents
+            # 如果有指定資料夾，先驗證是否存在
             if self.DRIVE_FOLDER_ID:
-                file_metadata['parents'] = [self.DRIVE_FOLDER_ID]
+                try:
+                    # 測試資料夾是否存在
+                    folder = self.drive_service.files().get(fileId=self.DRIVE_FOLDER_ID).execute()
+                    file_metadata['parents'] = [self.DRIVE_FOLDER_ID]
+                    logger.info(f"將上傳到資料夾: {folder.get('name', 'Unknown')}")
+                except Exception as e:
+                    logger.warning(f"無法存取指定資料夾 {self.DRIVE_FOLDER_ID}: {e}")
+                    logger.info("改為上傳到根目錄")
             
             logger.info(f"準備上傳圖片: {filename}")
             
